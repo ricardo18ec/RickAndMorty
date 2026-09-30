@@ -1,4 +1,4 @@
-package plat.rickandmorty.screens
+package plat.rickandmorty.screens.characters
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
