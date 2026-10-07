@@ -4,25 +4,20 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
-import androidx.navigation.toRoute
 import kotlinx.serialization.Serializable
 import plat.rickandmorty.screens.locations.LocationDetailScreen
 import plat.rickandmorty.screens.locations.LocationsScreen
 
-
 @Serializable
 object LocationsGraph
 
-
 @Serializable
 object LocationsDestination
-
 
 @Serializable
 data class LocationDetailDestination(
     val id: Int
 )
-
 
 fun NavGraphBuilder.locationsGraph(
     navController: NavHostController
@@ -32,6 +27,7 @@ fun NavGraphBuilder.locationsGraph(
         startDestination = LocationsDestination
     ) {
 
+        // LISTADO DE LOCATIONS
         composable<LocationsDestination> {
 
             LocationsScreen(
@@ -46,14 +42,9 @@ fun NavGraphBuilder.locationsGraph(
             )
         }
 
-
-        composable<LocationDetailDestination> { backStackEntry ->
-
-            val destination =
-                backStackEntry.toRoute<LocationDetailDestination>()
+        composable<LocationDetailDestination> {
 
             LocationDetailScreen(
-                locationId = destination.id,
                 onBackClick = {
                     navController.popBackStack()
                 }

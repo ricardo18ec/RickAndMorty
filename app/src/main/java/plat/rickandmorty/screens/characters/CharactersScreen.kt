@@ -24,19 +24,24 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import plat.rickandmorty.data.Character
-import plat.rickandmorty.data.CharacterDb
-
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.getValue
+import plat.rickandmorty.viewmodels.CharactersViewModel
+import plat.rickandmorty.screens.components.LoadingScreen
+import plat.rickandmorty.screens.components.ErrorScreen
+import androidx.compose.foundation.layout.Box
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CharactersScreen(
-    onCharacterClick: (Int) -> Unit
+    onCharacterClick: (Int) -> Unit,
+    viewModel: CharactersViewModel = viewModel()
 ) {
 
-    val characters = CharacterDb().getAllCharacters()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
-
             TopAppBar(
                 title = {
                     Text("Characters")
@@ -45,22 +50,49 @@ fun CharactersScreen(
         }
     ) { innerPadding ->
 
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
 
-            items(characters) { character ->
+            when {
+                state.hasError -> {
+                    ErrorScreen(
+                        mensaje = "Error al obtener listado de personajes.\nIntenta de nuevo",
+                        onRetry = {
+                            viewModel.cargarPersonajes()
+                        }
+                    )
+                }
 
-                CharacterItem(
-                    character = character,
-                    onClick = {
-                        onCharacterClick(character.id)
+                state.isLoading -> {
+                    LoadingScreen(
+                        onLoadingClick = {
+                            viewModel.mostrarError()
+                        }
+                    )
+                }
+
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+
+                        items(state.data) { character ->
+
+                            CharacterItem(
+                                character = character,
+                                onClick = {
+                                    onCharacterClick(character.id)
+                                }
+                            )
+                        }
                     }
-                )
+                }
             }
         }
     }

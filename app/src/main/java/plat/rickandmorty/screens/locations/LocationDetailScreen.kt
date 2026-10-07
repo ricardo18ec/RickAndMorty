@@ -1,5 +1,6 @@
 package plat.rickandmorty.screens.locations
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,21 +14,25 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import plat.rickandmorty.R
-import plat.rickandmorty.data.LocationDb
+import plat.rickandmorty.screens.components.ErrorScreen
+import plat.rickandmorty.screens.components.LoadingScreen
+import plat.rickandmorty.viewmodels.LocationDetailViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LocationDetailScreen(
-    locationId: Int,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    viewModel: LocationDetailViewModel = viewModel()
 ) {
 
-    val location = LocationDb()
-        .getLocationById(locationId)
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -56,38 +61,76 @@ fun LocationDetailScreen(
         }
     ) { innerPadding ->
 
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(24.dp)
         ) {
 
-            Text(
-                text = location.name,
-                style = MaterialTheme.typography.headlineLarge,
-                modifier = Modifier.padding(
-                    vertical = 24.dp
-                )
-            )
+            when {
 
-            LocationInfo(
-                titulo = "ID:",
-                valor = location.id.toString()
-            )
+                // ERROR
+                state.hasError -> {
 
-            LocationInfo(
-                titulo = "Type:",
-                valor = location.type
-            )
+                    ErrorScreen(
+                        mensaje = "Error al obtener información de la ubicación.\nIntenta de nuevo",
+                        onRetry = {
+                            viewModel.cargarLocation()
+                        }
+                    )
+                }
 
-            LocationInfo(
-                titulo = "Dimension:",
-                valor = location.dimension
-            )
+                // LOADING
+                state.isLoading -> {
+
+                    LoadingScreen(
+                        onLoadingClick = {
+                            viewModel.mostrarError()
+                        }
+                    )
+                }
+
+                // DATOS
+                else -> {
+
+                    state.data?.let { location ->
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp)
+                        ) {
+
+                            Text(
+                                text = location.name,
+                                style = MaterialTheme.typography.headlineLarge,
+                                modifier = Modifier.padding(
+                                    vertical = 24.dp
+                                )
+                            )
+
+                            LocationInfo(
+                                titulo = "ID:",
+                                valor = location.id.toString()
+                            )
+
+                            LocationInfo(
+                                titulo = "Type:",
+                                valor = location.type
+                            )
+
+                            LocationInfo(
+                                titulo = "Dimension:",
+                                valor = location.dimension
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
+
 
 @Composable
 fun LocationInfo(

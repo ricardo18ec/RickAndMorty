@@ -1,6 +1,7 @@
 package plat.rickandmorty.screens.characters
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,25 +17,29 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import plat.rickandmorty.R
-import plat.rickandmorty.data.CharacterDb
+import plat.rickandmorty.screens.components.ErrorScreen
+import plat.rickandmorty.screens.components.LoadingScreen
+import plat.rickandmorty.viewmodels.CharacterDetailViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CharacterDetailScreen(
-    characterId: Int,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    viewModel: CharacterDetailViewModel = viewModel()
 ) {
 
-    val character = CharacterDb()
-        .getCharacterById(characterId)
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -63,78 +68,115 @@ fun CharacterDetailScreen(
         }
     ) { innerPadding ->
 
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            AsyncImage(
-                model = character.image,
-                contentDescription = character.name,
-                modifier = Modifier
-                    .size(250.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
+            when {
 
-            Text(
-                text = character.name,
-                style = MaterialTheme.typography.headlineLarge,
-                modifier = Modifier.padding(top = 24.dp)
-            )
+                // ERROR
+                state.hasError -> {
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 32.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-
-                    Text(
-                        text = "Especie",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-
-                    Text(
-                        text = character.species
+                    ErrorScreen(
+                        mensaje = "Error al obtener información del personaje.\nIntenta de nuevo",
+                        onRetry = {
+                            viewModel.cargarPersonaje()
+                        }
                     )
                 }
 
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                // LOADING
+                state.isLoading -> {
 
-                    Text(
-                        text = "Status",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-
-                    Text(
-                        text = character.status
+                    LoadingScreen(
+                        onLoadingClick = {
+                            viewModel.mostrarError()
+                        }
                     )
                 }
-            }
 
-            Column(
-                modifier = Modifier.padding(top = 32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+                // DATOS
+                else -> {
 
-                Text(
-                    text = "Género",
-                    style = MaterialTheme.typography.titleMedium
-                )
+                    state.data?.let { character ->
 
-                Text(
-                    text = character.gender
-                )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+
+                            AsyncImage(
+                                model = character.image,
+                                contentDescription = character.name,
+                                modifier = Modifier
+                                    .size(250.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+
+                            Text(
+                                text = character.name,
+                                style = MaterialTheme.typography.headlineLarge,
+                                modifier = Modifier.padding(top = 24.dp)
+                            )
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 32.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+
+                                    Text(
+                                        text = "Especie",
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+
+                                    Text(
+                                        text = character.species
+                                    )
+                                }
+
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+
+                                    Text(
+                                        text = "Status",
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+
+                                    Text(
+                                        text = character.status
+                                    )
+                                }
+                            }
+
+                            Column(
+                                modifier = Modifier.padding(top = 32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+
+                                Text(
+                                    text = "Género",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+
+                                Text(
+                                    text = character.gender
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
