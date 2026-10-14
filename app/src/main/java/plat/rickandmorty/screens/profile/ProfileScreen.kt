@@ -18,6 +18,7 @@ import plat.rickandmorty.R
 
 @Composable
 fun ProfileScreen(
+    nombreUsuario: String,
     onLogoutClick: () -> Unit
 ) {
 
@@ -33,9 +34,7 @@ fun ProfileScreen(
         )
 
         Icon(
-            painter = painterResource(
-                R.drawable.ic_profile
-            ),
+            painter = painterResource(R.drawable.ic_profile),
             contentDescription = "Imagen de perfil",
             modifier = Modifier.size(150.dp),
             tint = MaterialTheme.colorScheme.primary
@@ -46,7 +45,7 @@ fun ProfileScreen(
         )
 
         Text(
-            text = "Nombre: Ricardo Escobar",
+            text = "Nombre: $nombreUsuario",
             style = MaterialTheme.typography.titleLarge
         )
 
