@@ -1,13 +1,18 @@
 package plat.rickandmorty.viewmodels
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import plat.rickandmorty.data.Character
-import plat.rickandmorty.data.CharacterDb
+import plat.rickandmorty.data.local.AppDatabase
+import plat.rickandmorty.data.repository.CharacterRepository
 
 data class CharactersState(
     val isLoading: Boolean = true,
@@ -15,13 +20,19 @@ data class CharactersState(
     val hasError: Boolean = false
 )
 
-class CharactersViewModel : ViewModel() {
+class CharactersViewModel(
+    application: Application
+) : AndroidViewModel(application) {
+
+    private val repository = CharacterRepository(
+        AppDatabase.getDatabase(application).characterDao()
+    )
 
     private val _state = MutableStateFlow(CharactersState())
 
     val state = _state.asStateFlow()
 
-    private var loadingJob: kotlinx.coroutines.Job? = null
+    private var loadingJob: Job? = null
 
     init {
         cargarPersonajes()
@@ -40,12 +51,17 @@ class CharactersViewModel : ViewModel() {
             delay(4000)
 
             try {
-                val personajes = CharacterDb().getAllCharacters()
+                repository.getAllCharacters().collectLatest { personajes ->
 
-                _state.value = CharactersState(
-                    isLoading = false,
-                    data = personajes
-                )
+                    _state.value = CharactersState(
+                        isLoading = false,
+                        data = personajes,
+                        hasError = false
+                    )
+                }
+
+            } catch (e: CancellationException) {
+                throw e
 
             } catch (e: Exception) {
 
@@ -58,11 +74,23 @@ class CharactersViewModel : ViewModel() {
     }
 
     fun mostrarError() {
+
         loadingJob?.cancel()
 
         _state.value = _state.value.copy(
             isLoading = false,
             hasError = true
         )
+    }
+
+    fun cambiarFavorito(character: Character) {
+
+        viewModelScope.launch {
+
+            repository.updateFavorite(
+                id = character.id,
+                isFavorite = !character.isFavorite
+            )
+        }
     }
 }

@@ -100,9 +100,14 @@ fun Navigation(
         // LOGIN
         composable<LoginDestination> {
 
-            LaunchedEffect(sessionState.nombre) {
+            LaunchedEffect(
+                sessionState.nombre,
+                sessionState.isLoading,
+                sessionState.isSyncing
+            ) {
 
                 if (!sessionState.isLoading &&
+                    !sessionState.isSyncing &&
                     !sessionState.nombre.isNullOrBlank()
                 ) {
 
@@ -117,10 +122,10 @@ fun Navigation(
 
             LoginScreen(
                 onEmpezarClick = { nombre ->
-                    if (nombre.isNotBlank()) {
-                        sessionViewModel.iniciarSesion(nombre)
-                    }
-                }
+                    sessionViewModel.iniciarSesion(nombre)
+                },
+                isSyncing = sessionState.isSyncing,
+                error = sessionState.error
             )
         }
 
@@ -130,6 +135,7 @@ fun Navigation(
 
             MainScreen(
                 nombreUsuario = sessionState.nombre.orEmpty(),
+                isSyncing = sessionState.isSyncing,
                 onLogoutClick = {
                     sessionViewModel.cerrarSesion()
                 }
@@ -157,6 +163,7 @@ fun Navigation(
 @Composable
 fun MainScreen(
     nombreUsuario: String,
+    isSyncing: Boolean,
     onLogoutClick: () -> Unit
 ) {
 
@@ -276,6 +283,7 @@ fun MainScreen(
 
                 ProfileScreen(
                     nombreUsuario = nombreUsuario,
+                    isSyncing = isSyncing,
                     onLogoutClick = onLogoutClick
                 )
             }

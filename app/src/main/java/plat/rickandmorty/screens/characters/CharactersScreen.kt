@@ -2,6 +2,7 @@ package plat.rickandmorty.screens.characters
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,25 +13,34 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
-import plat.rickandmorty.data.Character
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.runtime.getValue
-import plat.rickandmorty.viewmodels.CharactersViewModel
-import plat.rickandmorty.screens.components.LoadingScreen
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
+import plat.rickandmorty.R
+import plat.rickandmorty.data.Character
 import plat.rickandmorty.screens.components.ErrorScreen
-import androidx.compose.foundation.layout.Box
+import plat.rickandmorty.screens.components.LoadingScreen
+import plat.rickandmorty.viewmodels.CharactersViewModel
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CharactersScreen(
@@ -39,6 +49,16 @@ fun CharactersScreen(
 ) {
 
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    var soloFavoritos by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    val personajesVisibles = if (soloFavoritos) {
+        state.data.filter { it.isFavorite }
+    } else {
+        state.data
+    }
 
     Scaffold(
         topBar = {
@@ -50,46 +70,99 @@ fun CharactersScreen(
         }
     ) { innerPadding ->
 
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
 
-            when {
-                state.hasError -> {
-                    ErrorScreen(
-                        mensaje = "Error al obtener listado de personajes.\nIntenta de nuevo",
-                        onRetry = {
-                            viewModel.cargarPersonajes()
-                        }
-                    )
-                }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        soloFavoritos = !soloFavoritos
+                    }
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
 
-                state.isLoading -> {
-                    LoadingScreen(
-                        onLoadingClick = {
-                            viewModel.mostrarError()
-                        }
-                    )
-                }
+                Checkbox(
+                    checked = soloFavoritos,
+                    onCheckedChange = {
+                        soloFavoritos = it
+                    }
+                )
 
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                Text("Mostrar solo favoritos")
+            }
 
-                        items(state.data) { character ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
 
-                            CharacterItem(
-                                character = character,
-                                onClick = {
-                                    onCharacterClick(character.id)
+                when {
+
+                    state.hasError -> {
+
+                        ErrorScreen(
+                            mensaje = "Error al obtener personajes.\nIntenta de nuevo",
+                            onRetry = {
+                                viewModel.cargarPersonajes()
+                            }
+                        )
+                    }
+
+                    state.isLoading -> {
+
+                        LoadingScreen(
+                            onLoadingClick = {
+                                viewModel.mostrarError()
+                            }
+                        )
+                    }
+
+                    personajesVisibles.isEmpty() -> {
+
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+
+                            Text(
+                                text = if (soloFavoritos) {
+                                    "No hay personajes favoritos para mostrar"
+                                } else {
+                                    "No hay elementos para mostrar"
                                 }
                             )
+                        }
+                    }
+
+                    else -> {
+
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+
+                            items(
+                                items = personajesVisibles,
+                                key = { it.id }
+                            ) { character ->
+
+                                CharacterItem(
+                                    character = character,
+                                    onClick = {
+                                        onCharacterClick(character.id)
+                                    },
+                                    onFavoriteClick = {
+                                        viewModel.cambiarFavorito(character)
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -98,10 +171,12 @@ fun CharactersScreen(
     }
 }
 
+
 @Composable
 fun CharacterItem(
     character: Character,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onFavoriteClick: () -> Unit
 ) {
 
     Card(
@@ -123,30 +198,40 @@ fun CharacterItem(
                 model = character.image,
                 contentDescription = character.name,
                 modifier = Modifier
-                    .size(100.dp)
+                    .size(90.dp)
                     .clip(CircleShape),
                 contentScale = ContentScale.Crop
             )
 
             Column(
-                modifier = Modifier.padding(start = 16.dp)
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp)
             ) {
 
                 Text(
-                    text = character.name
+                    text = character.name,
+                    style = MaterialTheme.typography.titleMedium
                 )
 
-                Text(
-                    text = character.species
-                )
+                Text(character.species)
+                Text(character.status)
+                Text(character.gender)
+            }
 
-                Text(
-                    text = character.status
-                )
+            IconButton(
+                onClick = onFavoriteClick
+            ) {
 
-                Text(
-                    text = character.gender
-                )
+                IconButton(
+                    onClick = onFavoriteClick
+                ) {
+                    Text(
+                        text = if (character.isFavorite) "★" else "☆",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }

@@ -26,10 +26,14 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import plat.rickandmorty.R
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 
 @Composable
 fun LoginScreen(
-    onEmpezarClick: (String) -> Unit
+    onEmpezarClick: (String) -> Unit,
+    isSyncing: Boolean,
+    error: String?
 ) {
 
     var nombre by rememberSaveable {
@@ -80,14 +84,49 @@ fun LoginScreen(
             modifier = Modifier.height(16.dp)
         )
 
+
         Button(
             onClick = {
                 onEmpezarClick(nombre.trim())
             },
-            enabled = nombreValido,
+            enabled = nombreValido && !isSyncing,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Iniciar sesión")
+
+            if (isSyncing) {
+
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    strokeWidth = 2.dp
+                )
+
+            } else {
+
+                Text("Iniciar sesión")
+            }
         }
+
+        if (isSyncing) {
+
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
+
+            Text("Sincronizando datos...")
+        }
+
+        if (error != null) {
+
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
+
+            Text(
+                text = error,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+
     }
 }

@@ -1,16 +1,20 @@
 package plat.rickandmorty.viewmodels
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import plat.rickandmorty.data.Character
-import plat.rickandmorty.data.CharacterDb
+import plat.rickandmorty.data.local.AppDatabase
+import plat.rickandmorty.data.repository.CharacterRepository
 import plat.rickandmorty.navigation.CharacterDetailDestination
 
 data class CharacterDetailState(
@@ -20,11 +24,16 @@ data class CharacterDetailState(
 )
 
 class CharacterDetailViewModel(
+    application: Application,
     savedStateHandle: SavedStateHandle
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
     private val characterId =
         savedStateHandle.toRoute<CharacterDetailDestination>().id
+
+    private val repository = CharacterRepository(
+        AppDatabase.getDatabase(application).characterDao()
+    )
 
     private val _state = MutableStateFlow(CharacterDetailState())
 
@@ -49,14 +58,19 @@ class CharacterDetailViewModel(
             delay(2000)
 
             try {
-                val personaje = CharacterDb()
-                    .getCharacterById(characterId)
 
-                _state.value = CharacterDetailState(
-                    isLoading = false,
-                    data = personaje,
-                    hasError = false
-                )
+                repository.getCharacterById(characterId)
+                    .collectLatest { personaje ->
+
+                        _state.value = CharacterDetailState(
+                            isLoading = false,
+                            data = personaje,
+                            hasError = personaje == null
+                        )
+                    }
+
+            } catch (e: CancellationException) {
+                throw e
 
             } catch (e: Exception) {
 
@@ -69,11 +83,25 @@ class CharacterDetailViewModel(
     }
 
     fun mostrarError() {
+
         loadingJob?.cancel()
 
         _state.value = _state.value.copy(
             isLoading = false,
             hasError = true
         )
+    }
+
+    fun cambiarFavorito() {
+
+        val personaje = _state.value.data ?: return
+
+        viewModelScope.launch {
+
+            repository.updateFavorite(
+                id = personaje.id,
+                isFavorite = !personaje.isFavorite
+            )
+        }
     }
 }

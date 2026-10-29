@@ -1,14 +1,18 @@
 package plat.rickandmorty.viewmodels
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import plat.rickandmorty.data.Location
-import plat.rickandmorty.data.LocationDb
+import plat.rickandmorty.data.local.AppDatabase
+import plat.rickandmorty.data.repository.LocationRepository
 
 data class LocationsState(
     val isLoading: Boolean = true,
@@ -16,7 +20,13 @@ data class LocationsState(
     val hasError: Boolean = false
 )
 
-class LocationsViewModel : ViewModel() {
+class LocationsViewModel(
+    application: Application
+) : AndroidViewModel(application) {
+
+    private val repository = LocationRepository(
+        AppDatabase.getDatabase(application).locationDao()
+    )
 
     private val _state = MutableStateFlow(LocationsState())
 
@@ -38,18 +48,23 @@ class LocationsViewModel : ViewModel() {
                 isLoading = true
             )
 
-            // Simulamos una llamada a Internet
+            // Conservamos el Loading del Lab 9
             delay(4000)
 
             try {
 
-                val locations = LocationDb().getAllLocations()
+                repository.getAllLocations()
+                    .collectLatest { locations ->
 
-                _state.value = LocationsState(
-                    isLoading = false,
-                    data = locations,
-                    hasError = false
-                )
+                        _state.value = LocationsState(
+                            isLoading = false,
+                            data = locations,
+                            hasError = false
+                        )
+                    }
+
+            } catch (e: CancellationException) {
+                throw e
 
             } catch (e: Exception) {
 

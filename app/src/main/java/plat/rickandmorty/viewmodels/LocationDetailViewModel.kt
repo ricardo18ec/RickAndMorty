@@ -1,16 +1,20 @@
 package plat.rickandmorty.viewmodels
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import plat.rickandmorty.data.Location
-import plat.rickandmorty.data.LocationDb
+import plat.rickandmorty.data.local.AppDatabase
+import plat.rickandmorty.data.repository.LocationRepository
 import plat.rickandmorty.navigation.LocationDetailDestination
 
 data class LocationDetailState(
@@ -20,12 +24,16 @@ data class LocationDetailState(
 )
 
 class LocationDetailViewModel(
+    application: Application,
     savedStateHandle: SavedStateHandle
-) : ViewModel() {
-
+) : AndroidViewModel(application) {
 
     private val locationId =
         savedStateHandle.toRoute<LocationDetailDestination>().id
+
+    private val repository = LocationRepository(
+        AppDatabase.getDatabase(application).locationDao()
+    )
 
     private val _state = MutableStateFlow(LocationDetailState())
 
@@ -47,18 +55,23 @@ class LocationDetailViewModel(
                 isLoading = true
             )
 
+            // Conservamos el Loading de 2 segundos
             delay(2000)
 
             try {
 
-                val location = LocationDb()
-                    .getLocationById(locationId)
+                repository.getLocationById(locationId)
+                    .collectLatest { location ->
 
-                _state.value = LocationDetailState(
-                    isLoading = false,
-                    data = location,
-                    hasError = false
-                )
+                        _state.value = LocationDetailState(
+                            isLoading = false,
+                            data = location,
+                            hasError = location == null
+                        )
+                    }
+
+            } catch (e: CancellationException) {
+                throw e
 
             } catch (e: Exception) {
 

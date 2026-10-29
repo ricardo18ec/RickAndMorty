@@ -118,11 +118,36 @@ fun CharacterDetailScreen(
                                 contentScale = ContentScale.Crop
                             )
 
-                            Text(
-                                text = character.name,
-                                style = MaterialTheme.typography.headlineLarge,
-                                modifier = Modifier.padding(top = 24.dp)
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 24.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+
+                                Text(
+                                    text = character.name,
+                                    style = MaterialTheme.typography.headlineLarge
+                                )
+
+                                IconButton(
+                                    onClick = {
+                                        viewModel.cambiarFavorito()
+                                    }
+                                ) {
+
+                                    Text(
+                                        text = if (character.isFavorite) {
+                                            "★"
+                                        } else {
+                                            "☆"
+                                        },
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
 
                             Row(
                                 modifier = Modifier

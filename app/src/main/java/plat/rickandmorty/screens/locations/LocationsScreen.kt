@@ -84,7 +84,10 @@ fun LocationsScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
 
-                        items(state.data) { location ->
+                        items(
+                            items = state.data,
+                            key = { it.id }
+                        ) { location ->
 
                             LocationItem(
                                 location = location,
@@ -99,6 +102,7 @@ fun LocationsScreen(
         }
     }
 }
+
 
 @Composable
 fun LocationItem(

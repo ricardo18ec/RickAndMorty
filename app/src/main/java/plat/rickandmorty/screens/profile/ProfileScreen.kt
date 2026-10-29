@@ -19,6 +19,7 @@ import plat.rickandmorty.R
 @Composable
 fun ProfileScreen(
     nombreUsuario: String,
+    isSyncing: Boolean,
     onLogoutClick: () -> Unit
 ) {
 
@@ -60,9 +61,13 @@ fun ProfileScreen(
         )
 
         Button(
-            onClick = onLogoutClick
+            onClick = onLogoutClick,
+            enabled = !isSyncing
         ) {
-            Text("Cerrar sesión")
+            Text(
+                if (isSyncing) "Cerrando sesión..."
+                else "Cerrar sesión"
+            )
         }
     }
 }
